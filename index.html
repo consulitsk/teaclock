@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TeaClock</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jQuery CDN -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen">
+  <div class="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-4">TeaClock</h1>
+    
+    <!-- Časovač ochladzovania vody -->
+    <div id="cooling-timer" class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Ochladenie vody (100 °C → 80 °C)</h2>
+      <div class="text-center text-4xl font-mono mb-4" id="cooling-display">08:00</div>
+      <!-- Progressbar pre ochladenie -->
+      <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+        <div id="cooling-progress" class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+      </div>
+      <button id="cooling-start" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">
+        Spusti odpočet
+      </button>
+    </div>
+    <!-- Tlačidlo na potvrdenie ochladenia vody -->
+    <button id="confirm-cooling" class="mt-4 w-full bg-gray-500 hover:bg-gray-600 text-white py-2 rounded hidden">
+      Voda je ochladená
+    </button>
+    
+    <!-- Časovač lúhovania čaju -->
+    <div id="brewing-timer" class="hidden mt-6">
+      <h2 class="text-xl font-semibold mb-2">Lúhovanie čaju</h2>
+      <!-- Dlaždice pre výber času lúhovania -->
+      <div id="brewing-tiles" class="grid grid-cols-3 gap-4 mb-4">
+        <button class="brewing-tile bg-green-500 hover:bg-green-600 text-white py-2 rounded" data-minutes="2">2 min</button>
+        <button class="brewing-tile bg-green-500 hover:bg-green-600 text-white py-2 rounded" data-minutes="3">3 min</button>
+        <button class="brewing-tile bg-green-500 hover:bg-green-600 text-white py-2 rounded" data-minutes="5">5 min</button>
+        <button class="brewing-tile bg-green-500 hover:bg-green-600 text-white py-2 rounded" data-minutes="7">7 min</button>
+        <button class="brewing-tile bg-green-500 hover:bg-green-600 text-white py-2 rounded" data-minutes="10">10 min</button>
+      </div>
+      <div class="text-center text-4xl font-mono mb-4" id="brewing-display">00:00</div>
+      <!-- Progressbar pre lúhovanie -->
+      <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+        <div id="brewing-progress" class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio element pre zvukový signál -->
+  <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
+
+  <script>
+    // Registrácia service worker-a pre PWA
+    if ('serviceWorker' in navigator) {
+      $(window).on('load', function() {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(function(registration) {
+            console.log('Registrácia service worker-a prebehla úspešne so scope:', registration.scope);
+          })
+          .catch(function(err) {
+            console.log('Registrácia service worker-a zlyhala:', err);
+          });
+      });
+    }
+
+    // Funkcia na prehratie alarmového zvuku
+    function playAlarm() {
+      $('#alarm-sound').get(0).play().catch(function(error) {
+        console.log('Nepodarilo sa prehrať zvuk:', error);
+      });
+    }
+
+    $(document).ready(function() {
+      // ------------------------------
+      // Časovač ochladenia vody
+      // ------------------------------
+      var coolingTotalTime = 8 * 60; // 8 minút v sekundách
+      var coolingTime = coolingTotalTime;
+      var coolingInterval;
+
+      var $coolingDisplay = $('#cooling-display');
+      var $coolingStartBtn = $('#cooling-start');
+      var $confirmCoolingBtn = $('#confirm-cooling');
+      var $coolingProgress = $('#cooling-progress');
+      var $brewingTimerSection = $('#brewing-timer');
+
+      function updateCoolingDisplay(seconds) {
+        var mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+        var secs = String(seconds % 60).padStart(2, '0');
+        $coolingDisplay.text(mins + ':' + secs);
+      }
+
+      function updateCoolingProgress() {
+        var percentage = (coolingTime / coolingTotalTime) * 100;
+        $coolingProgress.css('width', percentage + '%');
+      }
+
+      $coolingStartBtn.on('click', function() {
+        $(this).prop('disabled', true);
+        coolingInterval = setInterval(function() {
+          coolingTime--;
+          updateCoolingDisplay(coolingTime);
+          updateCoolingProgress();
+          if (coolingTime <= 0) {
+            clearInterval(coolingInterval);
+            playAlarm();
+            $confirmCoolingBtn.removeClass('hidden');
+          }
+        }, 1000);
+      });
+
+      $confirmCoolingBtn.on('click', function() {
+        $('#cooling-timer').addClass('hidden');
+        $(this).addClass('hidden');
+        $brewingTimerSection.removeClass('hidden');
+      });
+
+      // ------------------------------
+      // Časovač lúhovania čaju
+      // ------------------------------
+      var brewingInterval;
+      var $brewingDisplay = $('#brewing-display');
+      var $brewingProgress = $('#brewing-progress');
+      var brewingTotalTime = 0; // Celkový čas lúhovania v sekundách
+      var brewingTime = 0; // Zostávajúci čas
+
+      function updateBrewingDisplay(seconds) {
+        var mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+        var secs = String(seconds % 60).padStart(2, '0');
+        $brewingDisplay.text(mins + ':' + secs);
+      }
+
+      function updateBrewingProgress(current, total) {
+        var percentage = (current / total) * 100;
+        $brewingProgress.css('width', percentage + '%');
+      }
+
+      // Spracovanie kliknutí na dlaždice s prednastaveným časom lúhovania
+      $('.brewing-tile').on('click', function() {
+        // Získame vybraný čas v minútach a prepočítame ho na sekundy
+        var minutes = parseInt($(this).data('minutes'));
+        brewingTotalTime = minutes * 60;
+        brewingTime = brewingTotalTime;
+
+        // Zakážeme ďalšie kliknutia
+        $('.brewing-tile').prop('disabled', true);
+
+        updateBrewingDisplay(brewingTime);
+        updateBrewingProgress(brewingTime, brewingTotalTime);
+
+        brewingInterval = setInterval(function() {
+          brewingTime--;
+          updateBrewingDisplay(brewingTime);
+          updateBrewingProgress(brewingTime, brewingTotalTime);
+          if (brewingTime <= 0) {
+            clearInterval(brewingInterval);
+            playAlarm();
+            alert('Čaj je hotový!');
+            // Resetovanie – povolíme opätovný výber času
+            $('.brewing-tile').prop('disabled', false);
+            $brewingDisplay.text('00:00');
+            $brewingProgress.css('width', '100%');
+          }
+        }, 1000);
+      });
+    });
+  </script>
+</body>
+</html>

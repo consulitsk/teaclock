@@ -1,0 +1,16 @@
+{
+    "name": "TeaClock",
+    "short_name": "TeaClock",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3b82f6",
+    "icons": [
+      {
+        "src": "icon.webp",
+        "sizes": "1024x1024",
+        "type": "image/webp"
+      }
+    ]
+  }
+  
