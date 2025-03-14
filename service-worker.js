@@ -19,3 +19,12 @@ self.addEventListener('fetch', event => {
       .then(response => response || fetch(event.request))
   );
 });
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'keep-alive') {
+    event.waitUntil(
+      new Promise((resolve) => setTimeout(resolve, 1000)) // Udržiavanie aktivity
+    );
+  }
+});
+
