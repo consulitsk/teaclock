@@ -36,7 +36,7 @@ Simply open `index.html` in a browser to start using TeaClock.
 ## Files in the Repository
 
 - `index.html` - Main interface with cooling and brewing timers.
-- `service-worker.js` - Enables offline capabilities through caching.
+- `sw.js` - Enables offline capabilities through caching.
 - `timer-worker.js` - Background worker handling countdowns without being paused by the browser.
 - `manifest.json` - Defines metadata for PWA functionality.
 - `alarm.mp3` - Sound file used for notifications.
@@ -52,7 +52,7 @@ Simply open `index.html` in a browser to start using TeaClock.
 
 ## PWA Functionality
 
-- The `service-worker.js` caches the essential files for offline access.
+- The `sw.js` caches the essential files for offline access.
 - The `manifest.json` enables installation as a standalone app on mobile devices.
 - The application remains active even when minimized or when the screen is turned off, ensuring accurate tracking.
 
